@@ -75,7 +75,7 @@ router.get('/:userId/bookings', (req, res) => {
     const bookings = db
       .prepare(
         `SELECT
-           b.id, b.status, b.created_at,
+           b.id, b.slot_id, b.user_id, b.status, b.created_at,
            s.venue_id, s.date, s.start_time, s.end_time,
            v.name AS venue_name, v.sport, v.location, v.image_url
          FROM bookings b
