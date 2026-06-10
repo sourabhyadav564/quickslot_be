@@ -65,7 +65,7 @@ router.post('/', (req, res) => {
 });
 
 // GET /users/:userId/bookings — list user's bookings
-router.get('/users/:userId/bookings', (req, res) => {
+router.get('/:userId/bookings', (req, res) => {
   // Users can only see their own bookings (unless same user)
   if (req.userId !== req.params.userId) {
     return res.status(403).json({ error: 'Forbidden' });
