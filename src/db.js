@@ -2,7 +2,7 @@ const Database = require('better-sqlite3');
 const { v4: uuidv4 } = require('uuid');
 const path = require('path');
 
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, '../../quickslot.db');
+const DB_PATH = path.join(__dirname, '../../quickslot.db');
 
 const db = new Database(DB_PATH);
 
@@ -13,8 +13,10 @@ db.pragma('foreign_keys = ON');
 function initDb() {
   db.exec(`
     CREATE TABLE IF NOT EXISTS users (
-      id   TEXT PRIMARY KEY,
-      name TEXT NOT NULL
+      id       TEXT PRIMARY KEY,
+      name     TEXT NOT NULL,
+      username TEXT UNIQUE,
+      password TEXT
     );
 
     CREATE TABLE IF NOT EXISTS venues (
@@ -42,20 +44,31 @@ function initDb() {
     );
   `);
 
+  // Migrate existing DBs: add username/password if not already present
+  try { db.exec('ALTER TABLE users ADD COLUMN username TEXT UNIQUE'); } catch (_) {}
+  try { db.exec('ALTER TABLE users ADD COLUMN password TEXT'); } catch (_) {}
+
   seedData();
 }
 
 function seedData() {
   // --- Users ---
   const users = [
-    { id: 'user_1', name: 'Arjun Mehta' },
-    { id: 'user_2', name: 'Priya Sharma' },
-    { id: 'user_3', name: 'Rohan Das' },
+    { id: 'user_1', name: 'Arjun Mehta',  username: 'arjun',  password: 'arjun123'  },
+    { id: 'user_2', name: 'Priya Sharma', username: 'priya',  password: 'priya123'  },
+    { id: 'user_3', name: 'Rohan Das',    username: 'rohan',  password: 'rohan123'  },
   ];
   const insertUser = db.prepare(
-    'INSERT OR IGNORE INTO users (id, name) VALUES (?, ?)'
+    'INSERT OR IGNORE INTO users (id, name, username, password) VALUES (?, ?, ?, ?)'
   );
-  for (const u of users) insertUser.run(u.id, u.name);
+  // Also back-fill credentials on existing rows (for already-seeded DBs)
+  const upsertCredentials = db.prepare(
+    'UPDATE users SET username = ?, password = ? WHERE id = ? AND (username IS NULL OR username = \'\')'
+  );
+  for (const u of users) {
+    insertUser.run(u.id, u.name, u.username, u.password);
+    upsertCredentials.run(u.username, u.password, u.id);
+  }
 
   // --- Venues ---
   const venues = [

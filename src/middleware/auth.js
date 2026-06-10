@@ -1,19 +1,26 @@
 const db = require('../db');
 
-const VALID_USERS = new Set(['user_1', 'user_2', 'user_3']);
-
 function authMiddleware(req, res, next) {
-  const userId = req.headers['x-user-id'];
+  // Accept Bearer token (new login flow) or legacy X-User-Id header
+  let userId = null;
+
+  const authHeader = req.headers['authorization'];
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    userId = authHeader.slice(7).trim();
+  } else {
+    userId = req.headers['x-user-id'];
+  }
 
   if (!userId) {
     return res.status(401).json({
-      error: 'Missing X-User-Id header',
+      error: 'Unauthorized: missing credentials',
     });
   }
 
-  if (!VALID_USERS.has(userId)) {
+  const user = db.prepare('SELECT id FROM users WHERE id = ?').get(userId);
+  if (!user) {
     return res.status(401).json({
-      error: `Unknown user: ${userId}. Valid users: user_1, user_2, user_3`,
+      error: `Unauthorized: unknown user`,
     });
   }
 

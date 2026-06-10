@@ -1,6 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 const authMiddleware = require('./middleware/auth');
+const authRouter = require('./routes/auth');
 const venuesRouter = require('./routes/venues');
 const bookingsRouter = require('./routes/bookings');
 
@@ -12,7 +13,10 @@ app.use(express.json());
 // Health check (no auth)
 app.get('/health', (req, res) => res.json({ status: 'ok' }));
 
-// Protected routes — all require X-User-Id header
+// Public auth route — no middleware
+app.use('/auth', authRouter);
+
+// Protected routes — all require credentials
 app.use(authMiddleware);
 app.use('/venues', venuesRouter);
 app.use('/bookings', bookingsRouter);
